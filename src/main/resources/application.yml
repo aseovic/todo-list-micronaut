@@ -15,6 +15,7 @@ micronaut:
 
 coherence:
   cluster: todo-list
+  role: MicronautApp
   serializer: java
   service:
     name: Tasks
