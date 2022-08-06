@@ -8,50 +8,52 @@
 > git checkout initial
 > ```
 
-## Build Instructions
+## Instructions
+   
+### Build the Application
 
-### Maven
+#### Maven
 
 ```bash
 mvn clean package
 ```
 
-### Gradle
+#### Gradle
 
 ```bash
 ./gradlew clean build
 ```
 
-## Running the Example
+### Run the Application
 
-### Maven
+#### Maven
 
 ```bash  
 mvn exec:exec
 ```
 
-### Gradle
+#### Gradle
 
 ```bash
 ./gradlew run
 ```
 
-## Building a Docker Image
+### Build a Docker Image
 
-### Maven
+#### Maven
 
 ```bash
 mvn clean install
 mvn package -P docker 
 ```
 
-### Gradle
+#### Gradle
 
 ```bash
 ./gradlew clean jibDockerBuild
 ```
 
-### Running the Docker Container
+### Run the Docker Container
 
 ```bash
 docker run -d -p 5001:5001 -P 5002:5002 ghcr.io/coherence-community/todo-list-micronaut-server
