@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright (c) 2021, 2022 Oracle and/or its affiliates.
+  Licensed under the Universal Permissive License v 1.0 as shown at
+  https://oss.oracle.com/licenses/upl.
+-->
+
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.micronaut</groupId>
+    <artifactId>micronaut-parent</artifactId>
+    <version>3.5.3</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.oracle.coherence.examples</groupId>
+  <artifactId>todo-list-micronaut-server</artifactId>
+  <version>22.06.1</version>
+
+  <properties>
+    <java.version>11</java.version>
+    <release.version>${java.version}</release.version>
+
+    <!-- Coherence properties -->
+    <coherence.groupId>com.oracle.coherence.ce</coherence.groupId>
+    <coherence.version>${project.version}</coherence.version>
+
+    <!-- Micronaut properties -->
+    <micronaut.runtime>netty</micronaut.runtime>
+    <micronaut.version>${project.parent.version}</micronaut.version>
+    <micronaut.gql.version>3.0.0</micronaut.gql.version>
+
+    <!-- Native image properties -->
+    <micronaut.processing.group>todo.list.micronaut.server</micronaut.processing.group>
+    <micronaut.processing.module>${project.artifactId}</micronaut.processing.module>
+
+    <!-- Coherence+Micronaut integration properties -->
+    <micronaut.coherence.version>3.5.1</micronaut.coherence.version>
+
+    <!-- Maven plugin properties -->
+    <plugin.jandex.version>1.1.1</plugin.jandex.version>
+    <plugin.exec.version>3.0.0</plugin.exec.version>
+    <plugin.jib.version>3.2.1</plugin.jib.version>
+    <plugin.compiler.version>3.8.1</plugin.compiler.version>
+    <plugin.micronaut.version>3.0.2</plugin.micronaut.version>
+  </properties>
+
+  <dependencies>
+    <!-- Coherence+Micronaut integration dependencies -->
+    <!-- These are overridden dependencies from the Micronaut BOM;
+         This is to ensure we get the expected version -->
+    <dependency>
+      <groupId>${coherence.groupId}</groupId>
+      <artifactId>coherence</artifactId>
+      <version>${coherence.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${coherence.groupId}</groupId>
+      <artifactId>coherence-json</artifactId>
+      <version>${coherence.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.micronaut.coherence</groupId>
+      <artifactId>micronaut-coherence</artifactId>
+      <version>${micronaut.coherence.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.micronaut.coherence</groupId>
+      <artifactId>micronaut-coherence-data</artifactId>
+      <version>${micronaut.coherence.version}</version>
+    </dependency>
+
+    <!-- Micronaut dependencies -->
+    <dependency>
+      <groupId>io.micronaut</groupId>
+      <artifactId>micronaut-validation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.micronaut</groupId>
+      <artifactId>micronaut-http-server-netty</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.micronaut</groupId>
+      <artifactId>micronaut-runtime</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.micronaut.graphql</groupId>
+      <artifactId>micronaut-graphql</artifactId>
+      <version>${micronaut.gql.version}</version>
+    </dependency>
+
+    <!-- Misc dependencies -->
+    <dependency>
+      <groupId>io.reactivex.rxjava2</groupId>
+      <artifactId>rxjava</artifactId>
+      <version>2.2.21</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>jakarta.inject</groupId>
+      <artifactId>jakarta.inject-api</artifactId>
+      <version>2.0.1</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.json</groupId>
+      <artifactId>javax.json-api</artifactId>
+      <version>1.1.4</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.json.bind</groupId>
+      <artifactId>javax.json.bind-api</artifactId>
+      <version>1.0</version>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Required for Micronaut -->
+      <plugin>
+        <groupId>io.micronaut.build</groupId>
+        <artifactId>micronaut-maven-plugin</artifactId>
+        <version>${plugin.micronaut.version}</version>
+      </plugin>
+
+      <!-- Also required for Micronaut; the micronaut inject dependency
+           is included with micronaut-coherence-data -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${plugin.compiler.version}</version>
+        <configuration>
+          <annotationProcessorPaths combine.children="append">
+            <annotationProcessorPath>
+              <groupId>io.micronaut.coherence</groupId>
+              <artifactId>micronaut-coherence-data</artifactId>
+              <version>${micronaut.coherence.version}</version>
+            </annotationProcessorPath>
+          </annotationProcessorPaths>
+          <!-- These are for generating a Graal native image -->
+          <compilerArgs>
+            <arg>-Amicronaut.processing.group=${micronaut.processing.group}
+            </arg>
+            <arg>-Amicronaut.processing.module=${micronaut.processing.group}
+            </arg>
+          </compilerArgs>
+          <forceJavacCompilerUse>true</forceJavacCompilerUse>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>${plugin.exec.version}</version>
+        <configuration>
+          <executable>java</executable>
+          <arguments>
+            <argument>-classpath</argument>
+            <classpath/>
+            <argument>
+              com.oracle.coherence.examples.todo.server.Application
+            </argument>
+          </arguments>
+        </configuration>
+      </plugin>
+
+      <!-- exclude Coherence artifacts from shading -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.2.4</version>
+        <configuration>
+          <shadedArtifactAttached>true</shadedArtifactAttached>
+          <artifactSet>
+            <excludes>
+              <exclude>${coherence.groupId}:*:*</exclude>
+            </excludes>
+          </artifactSet>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
+  </build>
+
+  <profiles>
+    <!--
+      Creates a single architecture image (based on the build machine architecture)
+      and publishes it to a local Docker daemon
+    -->
+    <profile>
+      <id>docker</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>com.google.cloud.tools</groupId>
+            <artifactId>jib-maven-plugin</artifactId>
+            <version>${plugin.jib.version}</version>
+            <configuration>
+              <from>
+                <image>
+                  gcr.io/distroless/java11-debian11
+                </image>
+              </from>
+              <to>
+                <image>ghcr.io/coherence-community/${project.artifactId}</image>
+                <tags>
+                  <tag>${project.version}</tag>
+                </tags>
+              </to>
+              <container>
+                <ports>
+                  <port>5001</port>
+                  <port>5002</port>
+                </ports>
+                <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
+              </container>
+              <containerizingMode>packaged</containerizingMode>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>dockerBuild</goal>
+                </goals>
+                <phase>package</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

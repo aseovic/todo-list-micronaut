@@ -1,0 +1,33 @@
+service:
+  name: Tasks
+
+micronaut:
+  application:
+    name: todo-list-micronaut-server
+  server:
+    port: 5001
+  router:
+    static-resources:
+      default:
+        enabled: true
+        mapping: "/**"
+        paths: "classpath:web"
+
+coherence:
+  cluster: todo-list
+  serializer: java
+  service:
+    name: Tasks
+  metrics:
+    http:
+      enabled: true
+      port: 5002
+  proxy:
+    enabled: false
+  topic:
+    enabled: false
+
+graphql:
+  enabled: true
+  path: /graphql
+  graphiql.enabled: true

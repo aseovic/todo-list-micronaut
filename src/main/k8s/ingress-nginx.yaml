@@ -1,0 +1,59 @@
+#
+# Copyright (c) 2021, 2022, Oracle and/or its affiliates.
+#
+# Licensed under the Universal Permissive License v 1.0 as shown at
+# http://oss.oracle.com/licenses/upl.
+#
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: http-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: micronaut.todo.coherence.community
+    http:
+      paths:
+      - pathType: ImplementationSpecific
+        backend:
+          service:
+            name: todo-list-http
+            port:
+              name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grpc-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: grpc.micronaut.todo.coherence.community
+    http:
+      paths:
+      - pathType: ImplementationSpecific
+        backend:
+          service:
+            name: todo-list-grpc
+            port:
+              name: grpc
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jaeger-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: jaeger.micronaut.todo.coherence.community
+    http:
+      paths:
+      - pathType: ImplementationSpecific
+        backend:
+          service:
+            name: jaeger-query
+            port:
+              name: query
+---
