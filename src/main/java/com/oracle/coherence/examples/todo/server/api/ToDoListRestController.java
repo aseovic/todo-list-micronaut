@@ -5,26 +5,23 @@
  * https://oss.oracle.com/licenses/upl.
  */
 
-package com.oracle.coherence.examples.todo.server.rest;
+package com.oracle.coherence.examples.todo.server.api;
 
 import com.oracle.coherence.examples.todo.server.Task;
 import com.oracle.coherence.examples.todo.server.TaskRepository;
+import com.oracle.coherence.examples.todo.server.ToDoListService;
 import com.tangosol.net.Cluster;
 import com.tangosol.net.Member;
 
-import com.tangosol.util.Filter;
-import com.tangosol.util.Filters;
 import io.micronaut.core.annotation.Nullable;
 
 import io.micronaut.http.MediaType;
 
-import io.micronaut.http.annotation.Consumes;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Delete;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.PathVariable;
 import io.micronaut.http.annotation.Post;
-import io.micronaut.http.annotation.Produces;
 import io.micronaut.http.annotation.Put;
 import io.micronaut.http.annotation.QueryValue;
 
@@ -48,8 +45,11 @@ import org.reactivestreams.Publisher;
  */
 @Controller("/api/tasks")
 @Singleton
-public class ToDoController
+public class ToDoListRestController
     {
+    @Inject
+    private ToDoListService api;
+
     @Inject
     private TaskRepository tasks;
 
@@ -92,46 +92,48 @@ public class ToDoController
     @Get(produces = MediaType.APPLICATION_JSON)
     public Collection<Task> getTasks(@Nullable @QueryValue(value = "completed") Boolean completed)
         {
-        Filter<Task> filter = completed == null
-                              ? Filters.always()
-                              : Filters.equal(Task::getCompleted, completed);
-
-        return tasks.getAllOrderedBy(filter, Task::getCreatedAt);
+        return api.getTasks(completed);
         }
 
     @Post(consumes = MediaType.APPLICATION_JSON, produces = MediaType.APPLICATION_JSON)
     public Task createTask(Task task)
         {
-        return tasks.save(new Task(task.getDescription()));
+        return api.createTask(task.getDescription());
         }
 
     @Delete("{id}")
-    public void deleteTask(@PathVariable("id") String id)
+    public Task deleteTask(@PathVariable("id") String id)
         {
-        tasks.removeById(id);
+        return api.deleteTask(id);
         }
 
     @Delete
-    public void deleteCompletedTasks()
+    public boolean deleteCompletedTasks()
         {
-        tasks.deleteByCompletedTrue();
+        return api.deleteCompletedTasks();
         }
 
-    @Put(value = "{id}", consumes = MediaType.APPLICATION_JSON)
+    @Put(value = "{id}",
+            consumes = MediaType.APPLICATION_JSON,
+            produces = MediaType.APPLICATION_JSON)
     public Task updateTask(@PathVariable("id") String id, Task task)
         {
+        Task result = null;
+
         String  description = task.getDescription();
         Boolean completed   = task.getCompleted();
 
         if (description != null)
             {
-            return tasks.update(id, Task::setDescription, description);
+            result = api.updateDescription(id, description);
             }
         else if (completed != null)
             {
-            return tasks.update(id, Task::setCompleted, completed);
+            result = api.updateCompletionStatus(id, completed);
             }
 
-        throw new IllegalArgumentException("either description or completion status must be specified");
+        return result == null
+               ? api.findTask(id)
+               : result;
         }
     }

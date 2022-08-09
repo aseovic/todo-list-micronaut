@@ -5,14 +5,15 @@
  * https://oss.oracle.com/licenses/upl.
  */
 
-package com.oracle.coherence.examples.todo.server.graphql;
+package com.oracle.coherence.examples.todo.server.api;
 
 import com.oracle.coherence.examples.todo.server.Task;
-import com.tangosol.net.NamedMap;
+import com.oracle.coherence.examples.todo.server.TaskNotFoundException;
+import com.oracle.coherence.examples.todo.server.TaskRepository;
 
+import com.oracle.coherence.examples.todo.server.ToDoListService;
 import com.tangosol.util.Filter;
 import com.tangosol.util.Filters;
-import com.tangosol.util.Processors;
 
 import graphql.GraphQL;
 
@@ -31,8 +32,6 @@ import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 
-import io.micronaut.coherence.annotation.Name;
-
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 
@@ -41,8 +40,8 @@ import io.micronaut.core.io.ResourceResolver;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
+import java.math.BigInteger;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -67,16 +66,17 @@ import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
  * Various bean factories for {@code GraphQL} {@link DataFetcher}s.
  */
 @Factory
-public class GraphQLFactory
+public class ToDoListGraphQlFactory
     {
     @Bean
     @Singleton
     @Inject
     public GraphQL graphQL(ResourceResolver resourceResolver,
-                           @Named("createTask") DataFetcher<Collection<Task>> createTaskFetcher,
-                           @Named("deleteCompletedTasks") DataFetcher<Task> deleteCompletedTasksFetcher,
+                           @Named("createTask") DataFetcher<Task> createTaskFetcher,
+                           @Named("deleteCompletedTasks") DataFetcher<Boolean> deleteCompletedTasksFetcher,
                            @Named("deleteTask") DataFetcher<Task> deleteTaskFetcher,
-                           @Named("updateTask") DataFetcher<Task> updateTaskFetcher,
+                           @Named("updateDescription") DataFetcher<Task> updateDescriptionFetcher,
+                           @Named("updateCompletionStatus") DataFetcher<Task> updateCompletionStatusFetcher,
                            @Named("findTask") DataFetcher<Task> findTaskFetcher,
                            @Named("tasks") DataFetcher<Collection<Task>> tasksFetcher)
         {
@@ -88,13 +88,15 @@ public class GraphQLFactory
 
         // Create the runtime wiring.
         RuntimeWiring runtimeWiring = RuntimeWiring.newRuntimeWiring()
+                .scalar(BIG_INTEGER)
                 .scalar(LOCAL_DATE_TIME)
                 .type("Query", typeWiring -> typeWiring.dataFetcher("findTask", findTaskFetcher))
                 .type("Query", typeWiring -> typeWiring.dataFetcher("tasks", tasksFetcher))
                 .type("Mutation", typeWiring -> typeWiring.dataFetcher("createTask", createTaskFetcher))
                 .type("Mutation", typeWiring -> typeWiring.dataFetcher("deleteCompletedTasks", deleteCompletedTasksFetcher))
                 .type("Mutation", typeWiring -> typeWiring.dataFetcher("deleteTask", deleteTaskFetcher))
-                .type("Mutation", typeWiring -> typeWiring.dataFetcher("updateTask", updateTaskFetcher))
+                .type("Mutation", typeWiring -> typeWiring.dataFetcher("updateDescription", updateDescriptionFetcher))
+                .type("Mutation", typeWiring -> typeWiring.dataFetcher("updateCompletionStatus", updateCompletionStatusFetcher))
                 .build();
 
         // Create the executable schema.
@@ -105,111 +107,77 @@ public class GraphQLFactory
         return GraphQL.newGraphQL(graphQLSchema).build();
         }
 
-
     @Bean
     @Singleton
     @Named("createTask")
-    public DataFetcher<Task> createTasksFetcher(@Name("tasks") NamedMap<String, Task> tasks)
+    public DataFetcher<Task> createTasksFetcher(ToDoListService tasks)
         {
         return environment ->
-            {
-            String description = environment.getArgument("description");
-            Objects.requireNonNull(description, "Description must be provided");
-            Task task = new Task(description);
-            tasks.put(task.getId(), task);
-            return task;
-            };
+                tasks.createTask(environment.getArgument("description"));
         }
 
     @Bean
     @Singleton
     @Named("deleteCompletedTasks")
-    public DataFetcher<Collection<Task>> deleteCompletedTasksFetcher(@Name("tasks") NamedMap<String, Task> tasks)
+    public DataFetcher<Boolean> deleteCompletedTasksFetcher(ToDoListService tasks)
         {
-        return environment ->
-            {
-            tasks.invokeAll(Filters.equal(Task::getCompleted, true), Processors.remove(Filters.always()));
-            return tasks.values();
-            };
+        return environment -> tasks.deleteCompletedTasks();
         }
 
     @Bean
     @Singleton
     @Named("deleteTask")
-    public DataFetcher<Task> deleteTaskFetcher(@Name("tasks") NamedMap<String, Task> tasks)
+    public DataFetcher<Task> deleteTaskFetcher(ToDoListService tasks)
         {
         return environment ->
-            {
-            String id = environment.getArgument("id");
-            return Optional.ofNullable(tasks.remove(id))
-                    .orElseThrow(() -> new TaskNotFoundException(GraphQLFactory.MESSAGE + id));
-            };
+                tasks.deleteTask(environment.getArgument("id"));
         }
 
     @Bean
     @Singleton
     @Named("findTask")
-    public DataFetcher<Task> findTasksFetcher(@Name("tasks") NamedMap<String, Task> tasks)
+    public DataFetcher<Task> findTaskFetcher(ToDoListService tasks)
         {
         return environment ->
-            {
-            String id = environment.getArgument("id");
-            return Optional.ofNullable(tasks.get(id))
-                    .orElseThrow(() -> new TaskNotFoundException(GraphQLFactory.MESSAGE + id));
-            };
+                tasks.findTask(environment.getArgument("id"));
         }
 
     @Bean
     @Singleton
     @Named("tasks")
-    public DataFetcher<Collection<Task>> tasksFetcher(@Name("tasks") NamedMap<String, Task> tasks)
+    public DataFetcher<Collection<Task>> tasksFetcher(ToDoListService tasks)
         {
         return environment ->
-            {
-            Boolean completed = environment.<Boolean>getArgument("completed");
-            Filter<Task> filter = completed == null
-                                  ? Filters.always()
-                                  : Filters.equal(Task::getCompleted, completed);
-
-            return tasks.values(filter, Comparator.comparingLong(Task::getCreatedAt));
-            };
+                tasks.getTasks(environment.getArgument("completed"));
         }
 
     @Bean
     @Singleton
-    @Named("updateTask")
-    public DataFetcher<Task> updateTaskFetcher(@Name("tasks") NamedMap<String, Task> tasks)
+    @Named("updateDescription")
+    public DataFetcher<Task> updateDescriptionFetcher(ToDoListService tasks)
         {
         return environment ->
             {
             String id = environment.getArgument("id");
             String description = environment.getArgument("description");
-            Boolean completed = environment.getArgument("completed");
-            try
-                {
-                return tasks.compute(id, (k, v) ->
-                    {
-                    Objects.requireNonNull(v);
 
-                    if (description != null)
-                        {
-                        v.setDescription(description);
-                        }
-                    if (completed != null)
-                        {
-                        v.setCompleted(completed);
-                        }
-                    return v;
-                    });
-                }
-            catch (Exception e)
-                {
-                throw new TaskNotFoundException(GraphQLFactory.MESSAGE + id);
-                }
+            return tasks.updateDescription(id, description);
             };
         }
 
-    private static final String MESSAGE = "Unable to find task with id ";
+    @Bean
+    @Singleton
+    @Named("updateCompletionStatus")
+    public DataFetcher<Task> updateCompletionStatusFetcher(ToDoListService tasks)
+        {
+        return environment ->
+            {
+            String id = environment.getArgument("id");
+            boolean completed = environment.getArgument("completed");
+
+            return tasks.updateCompletionStatus(id, completed);
+            };
+        }
 
     private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = new DateTimeFormatterBuilder()
             .parseCaseInsensitive()
@@ -225,9 +193,34 @@ public class GraphQLFactory
 
 
     // TODO: replace with graphql-java-extended-scalars once it become possible to use graphql-java 15+
+    public static final GraphQLScalarType BIG_INTEGER = GraphQLScalarType.newScalar()
+            .name("BigInteger")
+            .description("A custom scalar that handles BigInteger")
+            .coercing(new Coercing<BigInteger, String>()
+                {
+                public String serialize(Object o)
+                        throws CoercingSerializeException
+                    {
+                    return o.toString();
+                    }
+
+                public BigInteger parseValue(Object o)
+                        throws CoercingParseValueException
+                    {
+                    return BigInteger.valueOf(Long.parseLong((String) o));
+                    }
+
+                public BigInteger parseLiteral(Object o)
+                        throws CoercingParseLiteralException
+                    {
+                    return BigInteger.valueOf(Long.parseLong((String) o));
+                    }
+                })
+            .build();
+
     public static final GraphQLScalarType LOCAL_DATE_TIME = GraphQLScalarType.newScalar()
-            .name("DateTime")
-            .description("A custom scalar that handles local date time")
+            .name("LocalDateTime")
+            .description("A custom scalar that handles LocalDateTime")
             .coercing(new Coercing<LocalDateTime, String>()
                 {
                 @Override
@@ -303,20 +296,4 @@ public class GraphQLFactory
                 })
             .build();
 
-    /**
-     * An exception indicating that a {@link Task} was not found.
-     */
-    public static class TaskNotFoundException
-            extends Exception
-        {
-        /**
-         * Create the exception.
-         *
-         * @param message reason for the exception.
-         */
-        public TaskNotFoundException(String message)
-            {
-            super(message);
-            }
-        }
     }

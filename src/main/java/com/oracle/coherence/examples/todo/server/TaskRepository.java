@@ -17,8 +17,4 @@ import java.util.Collection;
 public abstract class TaskRepository
         extends AbstractCoherenceRepository<Task, String>
     {
-    /**
-     * Delete all {@link Task}s that have been completed.
-     */
-    public abstract void deleteByCompletedTrue();
     }
