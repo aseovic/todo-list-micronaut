@@ -71,10 +71,7 @@ Access via http://localhost:5001/
 
 ### Query the GraphQL Endpoint
 
-The GraphQL Endpoint is available at http://localhost:5001/graphql. Use one of the following tools to interact wih it:
-
-- [GraphiQL](https://github.com/graphql/graphiql)
-- [Insomnia](https://insomnia.rest/download)
+The GraphQL UI is available at http://localhost:5001/graphiql.html.
 
 To retrieve a collection of tasks, use the following query:
 
@@ -89,7 +86,19 @@ query {
   }
 }
 ```
-
+ 
+To create a new task, type:
+```graphql
+mutation {
+  createTask(description: "My GraphQL Task") {
+    id
+    description
+    completed
+    createdAt
+    createdAtDate
+  } 
+}
+```
 ## References
 
 * [Coherence CE](https://coherence.community/)
