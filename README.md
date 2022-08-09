@@ -2,11 +2,13 @@
 
 >This is a complete, final implementation of the application created during the workshop.
 > 
->To switch to the starting point for the workshop, check out the `initial` branch:
+>To switch to the starting point for the workshop, check out the `start` branch:
 > 
 >```bash
-> git checkout initial
+> git checkout start
 > ```
+>        
+>Open the project in the IDE of your choice, and follow the [lab instructions](https://aseovic.medium.com/coherence-to-do-list-micronaut-8cfead10f965).  
 
 ## Instructions
    
