@@ -68,117 +68,9 @@ import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
 @Factory
 public class ToDoListGraphQlFactory
     {
-    @Bean
-    @Singleton
-    @Inject
-    public GraphQL graphQL(ResourceResolver resourceResolver,
-                           @Named("createTask") DataFetcher<Task> createTaskFetcher,
-                           @Named("deleteCompletedTasks") DataFetcher<Boolean> deleteCompletedTasksFetcher,
-                           @Named("deleteTask") DataFetcher<Task> deleteTaskFetcher,
-                           @Named("updateDescription") DataFetcher<Task> updateDescriptionFetcher,
-                           @Named("updateCompletionStatus") DataFetcher<Task> updateCompletionStatusFetcher,
-                           @Named("findTask") DataFetcher<Task> findTaskFetcher,
-                           @Named("tasks") DataFetcher<Collection<Task>> tasksFetcher)
-        {
-        // Parse the schema.
-        TypeDefinitionRegistry typeRegistry = new TypeDefinitionRegistry();
-        SchemaParser schemaParser = new SchemaParser();
-        typeRegistry.merge(schemaParser.parse(
-                new BufferedReader(new InputStreamReader(resourceResolver.getResourceAsStream("classpath:schema.graphqls").get()))));
+    // TODO: add implementation here
 
-        // Create the runtime wiring.
-        RuntimeWiring runtimeWiring = RuntimeWiring.newRuntimeWiring()
-                .scalar(BIG_INTEGER)
-                .scalar(LOCAL_DATE_TIME)
-                .type("Query", typeWiring -> typeWiring.dataFetcher("findTask", findTaskFetcher))
-                .type("Query", typeWiring -> typeWiring.dataFetcher("tasks", tasksFetcher))
-                .type("Mutation", typeWiring -> typeWiring.dataFetcher("createTask", createTaskFetcher))
-                .type("Mutation", typeWiring -> typeWiring.dataFetcher("deleteCompletedTasks", deleteCompletedTasksFetcher))
-                .type("Mutation", typeWiring -> typeWiring.dataFetcher("deleteTask", deleteTaskFetcher))
-                .type("Mutation", typeWiring -> typeWiring.dataFetcher("updateDescription", updateDescriptionFetcher))
-                .type("Mutation", typeWiring -> typeWiring.dataFetcher("updateCompletionStatus", updateCompletionStatusFetcher))
-                .build();
-
-        // Create the executable schema.
-        SchemaGenerator schemaGenerator = new SchemaGenerator();
-        GraphQLSchema graphQLSchema = schemaGenerator.makeExecutableSchema(typeRegistry, runtimeWiring);
-
-        // Return the GraphQL bean.
-        return GraphQL.newGraphQL(graphQLSchema).build();
-        }
-
-    @Bean
-    @Singleton
-    @Named("createTask")
-    public DataFetcher<Task> createTasksFetcher(ToDoListService tasks)
-        {
-        return environment ->
-                tasks.createTask(environment.getArgument("description"));
-        }
-
-    @Bean
-    @Singleton
-    @Named("deleteCompletedTasks")
-    public DataFetcher<Boolean> deleteCompletedTasksFetcher(ToDoListService tasks)
-        {
-        return environment -> tasks.deleteCompletedTasks();
-        }
-
-    @Bean
-    @Singleton
-    @Named("deleteTask")
-    public DataFetcher<Task> deleteTaskFetcher(ToDoListService tasks)
-        {
-        return environment ->
-                tasks.deleteTask(environment.getArgument("id"));
-        }
-
-    @Bean
-    @Singleton
-    @Named("findTask")
-    public DataFetcher<Task> findTaskFetcher(ToDoListService tasks)
-        {
-        return environment ->
-                tasks.findTask(environment.getArgument("id"));
-        }
-
-    @Bean
-    @Singleton
-    @Named("tasks")
-    public DataFetcher<Collection<Task>> tasksFetcher(ToDoListService tasks)
-        {
-        return environment ->
-                tasks.getTasks(environment.getArgument("completed"));
-        }
-
-    @Bean
-    @Singleton
-    @Named("updateDescription")
-    public DataFetcher<Task> updateDescriptionFetcher(ToDoListService tasks)
-        {
-        return environment ->
-            {
-            String id = environment.getArgument("id");
-            String description = environment.getArgument("description");
-
-            return tasks.updateDescription(id, description);
-            };
-        }
-
-    @Bean
-    @Singleton
-    @Named("updateCompletionStatus")
-    public DataFetcher<Task> updateCompletionStatusFetcher(ToDoListService tasks)
-        {
-        return environment ->
-            {
-            String id = environment.getArgument("id");
-            boolean completed = environment.getArgument("completed");
-
-            return tasks.updateCompletionStatus(id, completed);
-            };
-        }
-
+    // ---- scalars ---------------------------------------------------------
     private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = new DateTimeFormatterBuilder()
             .parseCaseInsensitive()
             .append(ISO_LOCAL_DATE)
@@ -192,7 +84,6 @@ public class ToDoListGraphQlFactory
             .toFormatter();
 
 
-    // TODO: replace with graphql-java-extended-scalars once it become possible to use graphql-java 15+
     public static final GraphQLScalarType BIG_INTEGER = GraphQLScalarType.newScalar()
             .name("BigInteger")
             .description("A custom scalar that handles BigInteger")
@@ -295,5 +186,4 @@ public class ToDoListGraphQlFactory
                     }
                 })
             .build();
-
     }
